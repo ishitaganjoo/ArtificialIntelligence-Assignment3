@@ -13,7 +13,7 @@
 from pos_scorer import Score
 from pos_solver import Solver
 import sys
-
+import time
 # Read in training or test data file
 #
 def read_data(fname):
@@ -22,7 +22,8 @@ def read_data(fname):
     for line in file:
         data = tuple([w.lower() for w in line.split()])
         exemplars += [ (data[0::2], data[1::2]), ]
-
+        #print("in read data", exemplars)
+        #time.sleep(2)
     return exemplars
 
 
