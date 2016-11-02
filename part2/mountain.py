@@ -45,7 +45,17 @@ imsave('edges.jpg', edge_strength)
 
 # You'll need to add code here to figure out the results! For now,
 # just create a horizontal centered line.
-ridge = [ edge_strength.shape[0]/2 ] * edge_strength.shape[1]
+#ridge = [ edge_strength.shape[0]/2 ] * edge_strength.shape[1]
+
+ridge = []
+
+for i in range(0, len(edge_strength[0])):
+	newList = []
+	for j in range(0, len(edge_strength)):
+		newList.append(edge_strength[j][i])
+	ridge.append(newList.index(max(newList)))
+
+print(ridge)
 
 # output answer
 imsave(output_filename, draw_edge(input_image, ridge, (255, 0, 0), 5))
