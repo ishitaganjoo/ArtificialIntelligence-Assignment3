@@ -13,13 +13,23 @@
 import random
 import math
 import time
+from time import sleep
 
 # We've set up a suggested code structure, but feel free to change it. Just
 # make sure your code still works with the label.py and pos_scorer.py code
 # that we've supplied.
 #
 class Solver:
-
+    def __init__(self):
+        self.initialProbDict = {}
+        self.transitionProbDict = {}
+        self.emissionProbDict = {}
+        self.countWordsDict = {}
+        self.countPosDict = {}
+        self.mostPosDict = {}
+        self.viterbiStateDict = {}
+        self.mostLikelyStateSeqDict = {}
+        self.mostLikelyPOSList = []
     # Calculate the log of the posterior probability of a given sentence
     #  with a given part-of-speech labeling
     def posterior(self, sentence, label):
@@ -27,54 +37,117 @@ class Solver:
 
     # Do the training!
     def train(self, data):
-        initialProbDict = {}
-        transitionProbDict = {}
-        emissionProbDict = {}
-        countWordsDict = {}
         for item in data:
             #if element not in dict, count is 1, else fetch the value and increment the count
             #to do : divide
-            #count the unobserved vars
-            tupleWords = item[1]
+            #count the observed vars
+            tupleWords = item[0]
+            tuplePos = item[1]
             #print tupleWords
             for i in range(0,len(tupleWords)):
-                if tupleWords[i] not in countWordsDict:
-                    countWordsDict[tupleWords[i]] = 1
+                if tupleWords[i] not in self.countWordsDict:
+                    self.countWordsDict[tupleWords[i]] = 1
                 else:
-                    countWordsDict[tupleWords[i]] = countWordsDict[tupleWords[i]] + 1   
-            #print("dict of words", countWordsDict["transferred"])    
-            if item[1][0] not in initialProbDict:
-                initialProbDict[item[1][0]] = 1
+                    self.countWordsDict[tupleWords[i]] = self.countWordsDict[tupleWords[i]] + 1
+
+                if tuplePos[i] not in self.countPosDict:
+                    self.countPosDict[tuplePos[i]] = 1
+                else:
+                    self.countPosDict[tuplePos[i]] = self.countPosDict[tuplePos[i]] + 1
+
+            if item[1][0] not in self.initialProbDict:
+                self.initialProbDict[item[1][0]] = 1
             else:
-                initialProbDict[item[1][0]] = initialProbDict[item[1][0]] + 1    
+                self.initialProbDict[item[1][0]] = self.initialProbDict[item[1][0]] + 1
             for i in range(0, len(item[1])):
                 if i<len(item[1])-1: #else index out of range
-                    if item[1][i]+item[1][i+1] not in transitionProbDict:
-                        transitionProbDict[item[1][i]+item[1][i+1]] = 1
+                    if item[1][i]+item[1][i+1] not in self.transitionProbDict:
+                        self.transitionProbDict[item[1][i]+item[1][i+1]] = 1
                     else:
-                        transitionProbDict[item[1][i]+item[1][i+1]] = transitionProbDict[item[1][i]+item[1][i+1]] + 1
+                        self.transitionProbDict[item[1][i]+item[1][i+1]] = self.transitionProbDict[item[1][i]+item[1][i+1]] + 1
                     
-                if item[0][i]+'@'+item[1][i] not in emissionProbDict: # check both elements of the tuple
-                    emissionProbDict[item[0][i]+'@'+item[1][i]] = 1
+                if item[0][i]+'@'+item[1][i] not in self.emissionProbDict: # check both elements of the tuple
+                    self.emissionProbDict[item[0][i]+'@'+item[1][i]] = 1
                 else:
-                    emissionProbDict[item[0][i]+'@'+item[1][i]] = emissionProbDict[item[0][i]+'@'+item[1][i]] + 1
-                           
-        sumInitialProb = sum(initialProbDict.values())
-        initialProbDict.update({n: float( initialProbDict[n])/ float(sumInitialProb)for n in initialProbDict.keys()})
-        sumTranstnProb = sum(transitionProbDict.values())
-        initialProbDict.update({n: float( transitionProbDict[n])/ float(sumTranstnProb)for n in transitionProbDict.keys()})
-        listKeys = emissionProbDict.keys()
+                    self.emissionProbDict[item[0][i]+'@'+item[1][i]] = self.emissionProbDict[item[0][i]+'@'+item[1][i]] + 1
+
+        sumInitialProb = sum(self.initialProbDict.values())
+        self.initialProbDict.update({n: float( self.initialProbDict[n])/ float(sumInitialProb)for n in self.initialProbDict.keys()})
+        self.sumTranstnProb = sum(self.transitionProbDict.values())
+        self.transitionProbDict.update({n: float( self.transitionProbDict[n])/ float(self.sumTranstnProb)for n in self.transitionProbDict.keys()})
+        listKeys = self.emissionProbDict.keys()
         for key in listKeys:
-            word  = key.split('@')
-            emissionProbDict[key] = float(emissionProbDict[key])/float(countWordsDict[word[1]])
+            word = key.split('@')
+            self.emissionProbDict[key] = float(self.emissionProbDict[key])/float(self.countPosDict[word[1]])
+
         pass
 
     # Functions for each algorithm.
     #
     def simplified(self, sentence):
-        return [ [ [ "noun" ] * len(sentence)], [[0] * len(sentence),] ]
+        mostPosDict=self.mostPosDict
+        for i in range(0,len(sentence)):
+            maxprob=0;
+            for j in range(0,len(self.countPosDict.keys())):
+                dictKey=sentence[i]+'@'+self.countPosDict.keys()[j]
+                if dictKey in self.emissionProbDict.keys():
+                    currentprob = float(self.emissionProbDict[dictKey]) * float(self.countPosDict[self.countPosDict.keys()[j]])/float(self.countWordsDict[sentence[i]])+1
+                else:
+                    currentprob = 1
+                if maxprob < currentprob:
+                    maxprob = currentprob
+                    mostPosDict[sentence[i]] = self.countPosDict.keys()[j]+'@'+str(maxprob-1)
 
+        return [[ [mostPosDict[sentence[i]].split('@')[0] for i in range(len(sentence))]], [ ['%.2f'%(float(mostPosDict[sentence[i]].split('@')[1])) for i in range(len(sentence))], ]]
+
+    def returnMax(self,j,listPOS,emissionProb):
+        maxProb = 0
+        path = ''
+        for i in listPOS:
+            if i+j not in self.transitionProbDict:
+                #print("hellooo in trans")
+                self.transitionProbDict[i+j] = 0.000001
+            #print("transition prob is",i+j, self.transitionProbDict[i+j])
+            #time.sleep(2)    
+            prob = self.viterbiStateDict[i] * self.transitionProbDict[i+j]
+            if prob > maxProb:
+                maxProb = prob
+                path = i
+        self.mostLikelyStateSeqDict[j] = maxProb*emissionProb  
+        #print("in return max")
+        #time.sleep(2)
+        return maxProb
+    
     def hmm(self, sentence):
+        #print("transition prob dict", self.transitionProbDict)
+        self.mostLikelyPOSList = [] #empty it for each sentence
+        listPOS = ['adj','adv','adp','conj','det','noun','num','pron','prt','verb','x','.']
+        for i in range(0,len(sentence)):
+            for j in range(0,len(listPOS)):
+                if sentence[i]+'@'+listPOS[j] not in self.emissionProbDict:
+                    self.emissionProbDict[sentence[i]+'@'+listPOS[j]] = 0.000001
+                emissionProb = self.emissionProbDict[sentence[i]+'@'+listPOS[j]]
+                #print("emission prob is",sentence[i]+'@'+listPOS[j],emissionProb)
+                #time.sleep(2)
+                if i==0:
+                    #formula is initialProb*emissionProb
+                    self.viterbiStateDict[listPOS[j]] = self.initialProbDict[listPOS[j]]*emissionProb 
+                    self.mostLikelyStateSeqDict[listPOS[j]] = self.initialProbDict[listPOS[j]]*emissionProb   
+                else:
+                    #formula changed
+                    maxValue = self.returnMax(listPOS[j],listPOS,emissionProb)
+                    self.viterbiStateDict[listPOS[j]] =  maxValue * emissionProb
+            #pick the maximum probable POS from the dict
+            #print("most likely dict",self.mostLikelyStateSeqDict)
+            #time.sleep(3)
+            key, _ = max(self.mostLikelyStateSeqDict.iteritems(), key=lambda x:x[1])
+            #maximumVal = max(self.mostLikelyStateSeqDict, key=self.mostLikelyStateSeqDict.get)   
+            self.mostLikelyPOSList.append(key)
+            self.mostLikelyStateSeqDict = {}
+                 
+        print("sentence is", sentence)
+        time.sleep(3)            
+        print("most likely pos is",self.mostLikelyPOSList)            
         return [ [ [ "noun" ] * len(sentence)], [] ]
 
     def complex(self, sentence):
