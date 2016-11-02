@@ -34,8 +34,8 @@ class Solver:
         for item in data:
             #if element not in dict, count is 1, else fetch the value and increment the count
             #to do : divide
-            #count the observed vars
-            tupleWords = item[0]
+            #count the unobserved vars
+            tupleWords = item[1]
             #print tupleWords
             for i in range(0,len(tupleWords)):
                 if tupleWords[i] not in countWordsDict:
@@ -66,7 +66,7 @@ class Solver:
         listKeys = emissionProbDict.keys()
         for key in listKeys:
             word  = key.split('@')
-            emissionProbDict[key] = float(emissionProbDict[key])/float(countWordsDict[word[0]])
+            emissionProbDict[key] = float(emissionProbDict[key])/float(countWordsDict[word[1]])
         pass
 
     # Functions for each algorithm.
