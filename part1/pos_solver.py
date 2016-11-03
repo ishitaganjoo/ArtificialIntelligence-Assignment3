@@ -85,7 +85,7 @@ class Solver:
                     den_sum = float(den_sum) + float(value_2)
             self.transitionProbDict[key_1] = float(value_1) / float(den_sum)
 
-        
+
         listKeys = self.emissionProbDict.keys()
         for key in listKeys:
             self.emissionProbDict[key] = float(self.emissionProbDict[key])/float(self.countPosDict[key[1]])
