@@ -61,10 +61,10 @@ class Solver:
                 self.initialProbDict[item[1][0]] = self.initialProbDict[item[1][0]] + 1
             for i in range(0, len(item[1])):
                 if i<len(item[1])-1: #else index out of range
-                    if (item[1][i],item[1][i+1]) not in self.transitionProbDict:
-                        self.transitionProbDict[(item[1][i],item[1][i+1])] = 1
+                    if (item[1][i+1],item[1][i]) not in self.transitionProbDict:
+                        self.transitionProbDict[(item[1][i+1],item[1][i])] = 1
                     else:
-                        self.transitionProbDict[(item[1][i],item[1][i+1])] = self.transitionProbDict[(item[1][i],item[1][i+1])] + 1
+                        self.transitionProbDict[(item[1][i+1],item[1][i])] = self.transitionProbDict[(item[1][i+1],item[1][i])] + 1
                     
                 if (item[0][i],item[1][i]) not in self.emissionProbDict: # check both elements of the tuple
                     self.emissionProbDict[(item[0][i],item[1][i])] = 1
@@ -75,9 +75,17 @@ class Solver:
         self.initialProbDict.update({n: float( self.initialProbDict[n])/ float(sumInitialProb)for n in self.initialProbDict.keys()})
         
         listKeysTranstn = self.transitionProbDict.keys()
-        for key in listKeysTranstn:
-            self.transitionProbDict[key] = float(self.transitionProbDict[key])/float(self.countPosDict[key[0]])
-            
+        # for key in listKeysTranstn:
+        #     self.transitionProbDict[key] = float(self.transitionProbDict[key])/float(self.countPosDict[key[0]])
+
+        for key_1,value_1 in self.transitionProbDict.items():
+            den_sum = 0
+            for key_2,value_2 in self.transitionProbDict.items():
+                if key_1[0] == key_2[0]:
+                    den_sum = float(den_sum) + float(value_2)
+            self.transitionProbDict[key_1] = float(value_1) / float(den_sum)
+
+        
         listKeys = self.emissionProbDict.keys()
         for key in listKeys:
             self.emissionProbDict[key] = float(self.emissionProbDict[key])/float(self.countPosDict[key[1]])
@@ -92,12 +100,12 @@ class Solver:
             for j in range(0,len(self.countPosDict.keys())):
                 dictKey=(sentence[i],self.countPosDict.keys()[j]) #changed to tuple
                 if dictKey in self.emissionProbDict.keys():
-                    currentprob = float(self.emissionProbDict[dictKey]) * float(self.countPosDict[self.countPosDict.keys()[j]])/float(self.countWordsDict[sentence[i]])+1
+                    currentprob = float(self.emissionProbDict[dictKey]) * float(self.countPosDict[self.countPosDict.keys()[j]])/float(self.countWordsDict[sentence[i]])
                 else:
-                    currentprob = 1
+                    currentprob = 0.000001
                 if maxprob < currentprob:
                     maxprob = currentprob
-                    mostPosDict[sentence[i]] = self.countPosDict.keys()[j]+'@'+str(maxprob-1)
+                    mostPosDict[sentence[i]] = self.countPosDict.keys()[j]+'@'+str(maxprob)
 
         return [[ [mostPosDict[sentence[i]].split('@')[0] for i in range(len(sentence))]], [ ['%.2f'%(float(mostPosDict[sentence[i]].split('@')[1])) for i in range(len(sentence))], ]]
 
@@ -111,13 +119,13 @@ class Solver:
             if prob > maxProb:
                 maxProb = prob
                 path = i
-        self.mostLikelyStateSeqDict[j] = maxProb*emissionProb  
+        self.mostLikelyStateSeqDict[j] = maxProb*emissionProb
         return maxProb
     
     def hmm(self, sentence):
         #print("transition prob dict", self.transitionProbDict)
         self.mostLikelyPOSList = [] #empty it for each sentence
-        listPOS = ['adj','adv','adp','conj','det','noun','num','pron','prt','verb','x','.']
+        listPOS = list(set(self.initialProbDict.keys()))
         for i in range(0,len(sentence)):
             for j in range(0,len(listPOS)):
                 if (sentence[i],listPOS[j]) not in self.emissionProbDict:
@@ -137,9 +145,9 @@ class Solver:
             self.mostLikelyStateSeqDict = {}
                  
         print("sentence is", sentence)
-        time.sleep(3)            
-        print("most likely pos is",self.mostLikelyPOSList)            
-        return [ [ [ "noun" ] * len(sentence)], [] ]
+
+        print("most likely pos is",self.mostLikelyPOSList)
+        return [[[self.mostLikelyPOSList[n] for n in range(len(sentence))]], []]
 
     def complex(self, sentence):
         return [ [ [ "noun" ] * len(sentence)], [[0] * len(sentence),] ]
