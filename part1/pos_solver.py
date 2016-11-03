@@ -61,25 +61,26 @@ class Solver:
                 self.initialProbDict[item[1][0]] = self.initialProbDict[item[1][0]] + 1
             for i in range(0, len(item[1])):
                 if i<len(item[1])-1: #else index out of range
-                    if item[1][i]+item[1][i+1] not in self.transitionProbDict:
-                        self.transitionProbDict[item[1][i]+item[1][i+1]] = 1
+                    if (item[1][i],item[1][i+1]) not in self.transitionProbDict:
+                        self.transitionProbDict[(item[1][i],item[1][i+1])] = 1
                     else:
-                        self.transitionProbDict[item[1][i]+item[1][i+1]] = self.transitionProbDict[item[1][i]+item[1][i+1]] + 1
+                        self.transitionProbDict[(item[1][i],item[1][i+1])] = self.transitionProbDict[(item[1][i],item[1][i+1])] + 1
                     
-                if item[0][i]+'@'+item[1][i] not in self.emissionProbDict: # check both elements of the tuple
-                    self.emissionProbDict[item[0][i]+'@'+item[1][i]] = 1
+                if (item[0][i],item[1][i]) not in self.emissionProbDict: # check both elements of the tuple
+                    self.emissionProbDict[(item[0][i],item[1][i])] = 1
                 else:
-                    self.emissionProbDict[item[0][i]+'@'+item[1][i]] = self.emissionProbDict[item[0][i]+'@'+item[1][i]] + 1
+                    self.emissionProbDict[(item[0][i],item[1][i])] = self.emissionProbDict[(item[0][i],item[1][i])] + 1
 
         sumInitialProb = sum(self.initialProbDict.values())
         self.initialProbDict.update({n: float( self.initialProbDict[n])/ float(sumInitialProb)for n in self.initialProbDict.keys()})
-        self.sumTranstnProb = sum(self.transitionProbDict.values())
-        self.transitionProbDict.update({n: float( self.transitionProbDict[n])/ float(self.sumTranstnProb)for n in self.transitionProbDict.keys()})
+        
+        listKeysTranstn = self.transitionProbDict.keys()
+        for key in listKeysTranstn:
+            self.transitionProbDict[key] = float(self.transitionProbDict[key])/float(self.countPosDict[key[0]])
+            
         listKeys = self.emissionProbDict.keys()
         for key in listKeys:
-            word = key.split('@')
-            self.emissionProbDict[key] = float(self.emissionProbDict[key])/float(self.countPosDict[word[1]])
-
+            self.emissionProbDict[key] = float(self.emissionProbDict[key])/float(self.countPosDict[key[1]])
         pass
 
     # Functions for each algorithm.
@@ -89,7 +90,7 @@ class Solver:
         for i in range(0,len(sentence)):
             maxprob=0;
             for j in range(0,len(self.countPosDict.keys())):
-                dictKey=sentence[i]+'@'+self.countPosDict.keys()[j]
+                dictKey=(sentence[i],self.countPosDict.keys()[j]) #changed to tuple
                 if dictKey in self.emissionProbDict.keys():
                     currentprob = float(self.emissionProbDict[dictKey]) * float(self.countPosDict[self.countPosDict.keys()[j]])/float(self.countWordsDict[sentence[i]])+1
                 else:
@@ -104,18 +105,13 @@ class Solver:
         maxProb = 0
         path = ''
         for i in listPOS:
-            if i+j not in self.transitionProbDict:
-                #print("hellooo in trans")
-                self.transitionProbDict[i+j] = 0.000001
-            #print("transition prob is",i+j, self.transitionProbDict[i+j])
-            #time.sleep(2)    
-            prob = self.viterbiStateDict[i] * self.transitionProbDict[i+j]
+            if (i,j) not in self.transitionProbDict:
+                self.transitionProbDict[(i,j)] = 0.000001
+            prob = self.viterbiStateDict[i] * self.transitionProbDict[(i,j)]
             if prob > maxProb:
                 maxProb = prob
                 path = i
         self.mostLikelyStateSeqDict[j] = maxProb*emissionProb  
-        #print("in return max")
-        #time.sleep(2)
         return maxProb
     
     def hmm(self, sentence):
@@ -124,11 +120,9 @@ class Solver:
         listPOS = ['adj','adv','adp','conj','det','noun','num','pron','prt','verb','x','.']
         for i in range(0,len(sentence)):
             for j in range(0,len(listPOS)):
-                if sentence[i]+'@'+listPOS[j] not in self.emissionProbDict:
-                    self.emissionProbDict[sentence[i]+'@'+listPOS[j]] = 0.000001
-                emissionProb = self.emissionProbDict[sentence[i]+'@'+listPOS[j]]
-                #print("emission prob is",sentence[i]+'@'+listPOS[j],emissionProb)
-                #time.sleep(2)
+                if (sentence[i],listPOS[j]) not in self.emissionProbDict:
+                    self.emissionProbDict[(sentence[i],listPOS[j])] = 0.000001
+                emissionProb = self.emissionProbDict[(sentence[i],listPOS[j])]
                 if i==0:
                     #formula is initialProb*emissionProb
                     self.viterbiStateDict[listPOS[j]] = self.initialProbDict[listPOS[j]]*emissionProb 
@@ -138,10 +132,7 @@ class Solver:
                     maxValue = self.returnMax(listPOS[j],listPOS,emissionProb)
                     self.viterbiStateDict[listPOS[j]] =  maxValue * emissionProb
             #pick the maximum probable POS from the dict
-            #print("most likely dict",self.mostLikelyStateSeqDict)
-            #time.sleep(3)
             key, _ = max(self.mostLikelyStateSeqDict.iteritems(), key=lambda x:x[1])
-            #maximumVal = max(self.mostLikelyStateSeqDict, key=self.mostLikelyStateSeqDict.get)   
             self.mostLikelyPOSList.append(key)
             self.mostLikelyStateSeqDict = {}
                  
