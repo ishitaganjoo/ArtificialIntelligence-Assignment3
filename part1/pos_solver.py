@@ -142,7 +142,7 @@ class Solver:
         #print("transition prob dict", self.transitionProbDict)
         self.mostLikelyPOSList = [] #empty it for each sentence
         listPOS = list(set(self.initialProbDict.keys()))
-        
+
         for i in range(0,len(sentence)):
             for j in range(0,len(listPOS)):
                 if (sentence[i],listPOS[j]) not in self.emissionProbDict:
@@ -175,7 +175,7 @@ class Solver:
         for word in sentence:
             mostLikelyPOSDict = {}
             for next_pos in listPOS:
-                argmax = None
+                temp_path = None
                 valmax = 0
                 for current_pos in listPOS:
                     for prev_pos in listPOS:
@@ -189,13 +189,13 @@ class Solver:
                         emissionprob = self.emissionProbDict[(word,current_pos)] * self.complexTransitionProb[(next_pos,current_pos+'/'+prev_pos)]
                         v_prob *= emissionprob
                         if v_prob > valmax:
-                            argmax = v_path +','+ next_pos
+                            temp_path = v_path +','+ next_pos
                             valmax = v_prob
-                        mostLikelyPOSDict[(next_pos,current_pos)] = (argmax, valmax)
+                        mostLikelyPOSDict[(next_pos,current_pos)] = (temp_path, valmax)
             self.transitDict=mostLikelyPOSDict
 
         total = 0
-        argmax = None
+        temp_path = None
         valmax = 0
         for state1 in listPOS:
             for state2 in listPOS:
@@ -205,10 +205,10 @@ class Solver:
                     (v_path, v_prob) = self.transitDict[(state1,state2)] = (None, 0)
 
                 if v_prob > valmax:
-                    argmax = v_path
+                    temp_path = v_path
                     valmax = v_prob
 
-        argList=argmax.split(',')
+        argList=temp_path.split(',')
         return [ [ [ argList[:-1][n] for n in range(len(sentence))] ], [[0] * len(sentence),] ]
 
 
