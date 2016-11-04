@@ -8,7 +8,87 @@ from PIL import Image
 from numpy import *
 from scipy.ndimage import filters
 from scipy.misc import imsave
+from random import randint
 import sys
+
+
+class mountainRidgeFinding:
+
+	def __init__(self, edge_strength):
+		self.edge_strength = edge_strength
+
+	def calculateRandomGradient(self):
+		firstRandom = randint(0, edge_strength.shape[1]-1)
+		
+		maxGradient = []
+		sample = []
+		
+		for i in range(0 , len(edge_strength)):
+			maxGradient.append(edge_strength[i][firstRandom])
+		sample.append(maxGradient.index(max(maxGradient)))
+		#print("here",sample)
+		return(firstRandom, sample[0])
+
+	def calculateSample(self, xCoord, yCoord):
+		#print(xCoord, yCoord)
+		sampleList = []
+		for i in range(0, xCoord):
+			newList = []
+			for j in range(0, yCoord):
+				jFloat = float(j)
+				yCoordFloat = float(yCoord)
+				if(j == 0):
+					newList.append(edge_strength[j][i] * (0.001))
+				else:
+					newList.append(edge_strength[j][i]*(jFloat/yCoordFloat))
+			sampleList.append(newList.index(max(newList)))
+		#print("first", sampleList)
+		for i in range(xCoord, edge_strength.shape[1]):
+			newList = []
+			for j in range(yCoord, edge_strength.shape[0]):
+				jFloat = float(j)
+				yFloat = float(edge_strength.shape[0])
+				if(j == yCoord):
+					prob = 0.99
+					newList.append(edge_strength[j][i]* prob)
+				else:
+					newList.append(edge_strength[j][i]*((yFloat - yCoord)/ yFloat))
+			sampleList.append(newList.index(max(newList)))
+		return sampleList
+
+	def sample2(self):
+		sampleList = []
+		xCoord = edge_strength.shape[1]
+		yCoord = edge_strength.shape[0]
+		for i in range(0, xCoord):
+			newList = []
+			for j in range(0, yCoord):
+				if(i == 0):
+					newList.append(edge_strength[j][i])
+				else:
+					lastRow = sampleList[len(sampleList)-1]
+					if(lastRow > j):
+						distanceFromLastRow = lastRow - j
+						newList.append(edge_strength[j][i] * (1.0 / distanceFromLastRow ))
+					elif(lastRow == j):
+						newList.append(edge_strength[j][i])
+					else:
+						distanceFromLastRow = j - lastRow
+						newList.append(edge_strength[j][i] * (1.0 / distanceFromLastRow))
+			sampleList.append(newList.index(max(newList)))
+		return sampleList
+		
+
+	def mainClass(self):
+		#coordTuple = self.calculateRandomGradient()
+		#sampleList = self.calculateSample(coordTuple[0], coordTuple[1])
+		samples = []
+		for i in range(0, 500):
+			coordTuple = self.calculateRandomGradient()
+			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))
+		#print(samples)
+		samples2 = self.sample2()
+		return (samples,samples2)
 
 # calculate "Edge strength map" of an image
 #
@@ -49,13 +129,75 @@ imsave('edges.jpg', edge_strength)
 
 ridge = []
 
+print("length1",len(edge_strength[0]))
+print("length",len(edge_strength))
+print("shape", edge_strength.shape)
+
 for i in range(0, len(edge_strength[0])):
 	newList = []
 	for j in range(0, len(edge_strength)):
 		newList.append(edge_strength[j][i])
 	ridge.append(newList.index(max(newList)))
+'''
+newList2 = []
+for i in range(0, 1):
+	newList = []
+	for j in range(0, len(edge_strength)):
+		newList.append(edge_strength[j][i])
+	newList2.append(newList.index(max(newList)))
+	#ridge.append(newList.index(max(newList)))
 
-print(ridge)
+firstPixel = newList2[0]
+print(firstPixel)
+ridge.append(firstPixel)
+for i in range(1, len(edge_strength[0])):
+	newList = []
+	for j in range(firstPixel - 125, firstPixel + 125):
+		#print(j)
+		newList.append(edge_strength[j][i])
+	ridge.append(newList.index(max(newList)) + firstPixel-125) 
+	
+
+#print(newList2)
+#print(ridge)
+
+
+#print(edge_strength.shape[1])
+
+firstRandom = randint(0,500)
+
+maxGradient = []
+sampleList = []
+
+for i in range(0, len(edge_strength)):
+	maxGradient.append(edge_strength[i][firstRandom])
+sampleList.append(maxGradient.index(max(maxGradient)))
+
+#print(firstRandom)
+#print(sampleList)'''
+
+
+mountain = mountainRidgeFinding(edge_strength)
+sampleList = mountain.mainClass()
+#print("sample",len(sampleList[0]))
+
+sampleListOld = sampleList[0]
+sampleListNew = sampleList[1]
+
+newRidge2 = []
+for i in range(0, len(sampleListOld[0])):
+	newDict = {}
+	for j in range(0, len(sampleListOld)):
+		if(newDict.get(sampleListOld[j][i]) != None):
+			value = newDict[sampleListOld[j][i]]
+			newDict[sampleListOld[j][i]] = value + 1
+		else:
+			newDict[sampleListOld[j][i]] = 1
+	#print(newDict)
+	newRidge2.append(max(newDict, key=(lambda key: newDict[key])))
+#print(newRidge2)
 
 # output answer
 imsave(output_filename, draw_edge(input_image, ridge, (255, 0, 0), 5))
+imsave(output_filename, draw_edge(input_image, newRidge2, (0, 255, 0), 5))
+imsave(output_filename, draw_edge(input_image, sampleListNew, (0, 0, 255), 5))
