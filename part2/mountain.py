@@ -55,6 +55,28 @@ class mountainRidgeFinding:
 					newList.append(edge_strength[j][i]*((yFloat - yCoord)/ yFloat))
 			sampleList.append(newList.index(max(newList)))
 		return sampleList
+
+	def sample2(self):
+		sampleList = []
+		xCoord = edge_strength.shape[1]
+		yCoord = edge_strength.shape[0]
+		for i in range(0, xCoord):
+			newList = []
+			for j in range(0, yCoord):
+				if(i == 0):
+					newList.append(edge_strength[j][i])
+				else:
+					lastRow = sampleList[len(sampleList)-1]
+					if(lastRow > j):
+						distanceFromLastRow = lastRow - j
+						newList.append(edge_strength[j][i] * (1.0 / distanceFromLastRow ))
+					elif(lastRow == j):
+						newList.append(edge_strength[j][i])
+					else:
+						distanceFromLastRow = j - lastRow
+						newList.append(edge_strength[j][i] * (1.0 / distanceFromLastRow))
+			sampleList.append(newList.index(max(newList)))
+		return sampleList
 		
 
 	def mainClass(self):
@@ -65,7 +87,8 @@ class mountainRidgeFinding:
 			coordTuple = self.calculateRandomGradient()
 			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))
 		#print(samples)
-		return samples
+		samples2 = self.sample2()
+		return (samples,samples2)
 
 # calculate "Edge strength map" of an image
 #
@@ -158,15 +181,18 @@ mountain = mountainRidgeFinding(edge_strength)
 sampleList = mountain.mainClass()
 #print("sample",len(sampleList[0]))
 
+sampleListOld = sampleList[0]
+sampleListNew = sampleList[1]
+
 newRidge2 = []
-for i in range(0, len(sampleList[0])):
+for i in range(0, len(sampleListOld[0])):
 	newDict = {}
-	for j in range(0, len(sampleList)):
-		if(newDict.get(sampleList[j][i]) != None):
-			value = newDict[sampleList[j][i]]
-			newDict[sampleList[j][i]] = value + 1
+	for j in range(0, len(sampleListOld)):
+		if(newDict.get(sampleListOld[j][i]) != None):
+			value = newDict[sampleListOld[j][i]]
+			newDict[sampleListOld[j][i]] = value + 1
 		else:
-			newDict[sampleList[j][i]] = 1
+			newDict[sampleListOld[j][i]] = 1
 	#print(newDict)
 	newRidge2.append(max(newDict, key=(lambda key: newDict[key])))
 #print(newRidge2)
@@ -174,3 +200,4 @@ for i in range(0, len(sampleList[0])):
 # output answer
 imsave(output_filename, draw_edge(input_image, ridge, (255, 0, 0), 5))
 imsave(output_filename, draw_edge(input_image, newRidge2, (0, 255, 0), 5))
+imsave(output_filename, draw_edge(input_image, sampleListNew, (0, 0, 255), 5))
