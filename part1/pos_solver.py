@@ -192,16 +192,27 @@ class Solver:
                     self.transitDict[(listPOS[j],listPOS[k])] = math.log1p(self.transitDict[listPOS[j]] * self.transitionProbDict[(listPOS[j],listPOS[k])] * self.emissionProbDict[(sentence[i],listPOS[k])])
                     self.mostLikelyStateSeqCompDict[listPOS[k]] = self.transitDict[(listPOS[j],listPOS[k])]
         for i in range(len(sentence)):
-            # self.mostLikelyStateSeqCompDict = {}
+            self.mostLikelyStateSeqCompDict = {}
+            # mostlikelyPOS = []
+            # mostlikelyPOSProb = []
+
             for m in range(len(listPOS)):
                 for n in range(len(listPOS)):
                     self.transitDict[(listPOS[m],listPOS[n])] = math.log1p(self.returncomplexmax(m,n,listPOS,self.emissionProbDict[(sentence[i],listPOS[n])]) * self.emissionProbDict[(sentence[i],listPOS[n])])
-            d_descending = OrderedDict(sorted(self.mostLikelyStateSeqCompDict.items(),
-                                                  key=lambda kv: kv[1], reverse=True))
-            mostlikelyPOS.append(d_descending.keys()[0])
-            mostlikelyPOSProb.append(d_descending[d_descending.keys()[0]])
 
-        return [[[n for n in mostlikelyPOS]], [['%.2f' % (abs(math.log(n)) / 1000) for n in mostlikelyPOSProb], ]]
+            p = 0
+            path = None
+            total_prob=sum(self.mostLikelyStateSeqCompDict.values())
+            for s in self.mostLikelyStateSeqCompDict.keys():
+                if p < self.mostLikelyStateSeqCompDict[s]:
+                    p = self.mostLikelyStateSeqCompDict[s]
+                    path = s
+
+            mostlikelyPOS.append(path)
+            mostlikelyPOSProb.append(float(self.mostLikelyStateSeqCompDict[path])/float(total_prob))
+
+
+        return [[[n for n in mostlikelyPOS]], [['%.2f' % (n) for n in mostlikelyPOSProb], ]]
 
     # This solve() method is called by label.py, so you should keep the interface the
     #  same, but you can change the code itself. 
