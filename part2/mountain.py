@@ -193,7 +193,7 @@ class mountainRidgeFinding:
 			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))'''
 		print(edge_strength.shape[0], edge_strength.shape[1])
 		listOfSamples = []
-		for i in range(0, 500):
+		for i in range(0, 10):
 			listOfSamples.append(self.sample3())
 		samples2 = self.sample2()
 		humanSample = self.sample4()
@@ -247,43 +247,6 @@ for i in range(0, len(edge_strength[0])):
 	for j in range(0, len(edge_strength)):
 		newList.append(edge_strength[j][i])
 	ridge.append(newList.index(max(newList)))
-'''
-newList2 = []
-for i in range(0, 1):
-	newList = []
-	for j in range(0, len(edge_strength)):
-		newList.append(edge_strength[j][i])
-	newList2.append(newList.index(max(newList)))
-	#ridge.append(newList.index(max(newList)))
-
-firstPixel = newList2[0]
-print(firstPixel)
-ridge.append(firstPixel)
-for i in range(1, len(edge_strength[0])):
-	newList = []
-	for j in range(firstPixel - 125, firstPixel + 125):
-		#print(j)
-		newList.append(edge_strength[j][i])
-	ridge.append(newList.index(max(newList)) + firstPixel-125) 
-	
-
-#print(newList2)
-#print(ridge)
-
-
-#print(edge_strength.shape[1])
-
-firstRandom = randint(0,500)
-
-maxGradient = []
-sampleList = []
-
-for i in range(0, len(edge_strength)):
-	maxGradient.append(edge_strength[i][firstRandom])
-sampleList.append(maxGradient.index(max(maxGradient)))
-
-#print(firstRandom)
-#print(sampleList)'''
 
 
 mountain = mountainRidgeFinding(edge_strength, gt_row, gt_col)
