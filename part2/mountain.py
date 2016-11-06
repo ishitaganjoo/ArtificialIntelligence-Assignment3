@@ -143,12 +143,18 @@ class mountainRidgeFinding:
 				lastRow = sampleList[0]
 				if(lastRow > j):
 					distanceFromLastRow = lastRow - j
-					newList.append((edge_strength[j][i] / gradientSum) * (200.0 / distanceFromLastRow))
+					if(distanceFromLastRow > 2):
+						newList.append(((edge_strength[j][i] / gradientSum) * 0.01) * (1.0 / distanceFromLastRow))
+					else:
+						newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
 				elif(lastRow == j):
-					newList.append((edge_strength[j][i]+100 / gradientSum) * 200.0)
+					newList.append(edge_strength[j][i] / gradientSum)
 				else:
 					distanceFromLastRow = j - lastRow
-					newList.append((edge_strength[j][i] / gradientSum) * (200.0 / distanceFromLastRow))
+					if(distanceFromLastRow > 2):
+						newList.append(((edge_strength[j][i] / gradientSum) * 0.01) * (1.0 / distanceFromLastRow))
+					else:
+						newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
 			sampleList.insert(0, newList.index(max(newList)))
 		for i in range(xCoord+1, finalXCoord):
 			newList = []
@@ -159,12 +165,18 @@ class mountainRidgeFinding:
 				lastRow = sampleList[len(sampleList) - 1]
 				if(lastRow > j):
 					distanceFromLastRow = lastRow - j
-					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+					if(distanceFromLastRow > 2):
+						newList.append(((edge_strength[j][i] / gradientSum) * 0.01) * (1.0 / distanceFromLastRow))
+					else:
+						newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
 				elif(lastRow == j):
 					newList.append(edge_strength[j][i] / gradientSum)
 				else:
 					distanceFromLastRow = j - lastRow
-					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+					if(distanceFromLastRow > 2):
+						newList.append(((edge_strength[j][i] / gradientSum) * 0.01) * (1.0 / distanceFromLastRow))
+					else:
+						newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
 			sampleList.append(newList.index(max(newList)))
 		return sampleList
 					
@@ -181,7 +193,7 @@ class mountainRidgeFinding:
 			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))'''
 		print(edge_strength.shape[0], edge_strength.shape[1])
 		listOfSamples = []
-		for i in range(0, 500):
+		for i in range(0, 1):
 			listOfSamples.append(self.sample3())
 		samples2 = self.sample2()
 		humanSample = self.sample4()
