@@ -14,8 +14,10 @@ import sys
 
 class mountainRidgeFinding:
 
-	def __init__(self, edge_strength):
+	def __init__(self, edge_strength, gt_row, gt_col):
 		self.edge_strength = edge_strength
+		self.gt_row = gt_row
+		self.gt_col = gt_col
 
 	def calculateRandomGradient(self):
 		firstRandom = randint(0, edge_strength.shape[1]-1)
@@ -77,18 +79,113 @@ class mountainRidgeFinding:
 						newList.append(edge_strength[j][i] * (1.0 / distanceFromLastRow))
 			sampleList.append(newList.index(max(newList)))
 		return sampleList
+
+	def sample3(self):
+		#xCoord = edge_strength.shape[1]
+		sampleList = []
+		yCoord = edge_strength.shape[0]
+		finalXCoord = edge_strength.shape[1]
+		coordTuple = self.calculateRandomGradient()
+		xCoord = coordTuple[0]
+		sampleList.insert(0, coordTuple[1])
+		for i in range(xCoord-1 , -1, -1):
+			newList = []
+			gradientSum = 0
+			for k in range(0, yCoord):
+				gradientSum += edge_strength[k][i]
+			for j in range(0, yCoord):
+				lastRow = sampleList[0]
+				if(lastRow > j):
+					distanceFromLastRow = lastRow - j
+					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+				elif(lastRow == j):
+					newList.append(edge_strength[j][i] / gradientSum)
+				else:
+					distanceFromLastRow = j - lastRow
+					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+			sampleList.insert(0, newList.index(max(newList)))
+		
+		for i in range(xCoord+1, finalXCoord):
+			newList = []
+			gradientSum = 0
+			for k in range(0, yCoord):
+				gradientSum += edge_strength[k][i]
+			for j in range(0, yCoord):
+				lastRow = sampleList[len(sampleList)-1]
+				if(lastRow > j):
+					distanceFromLastRow = lastRow - j
+					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+				elif(lastRow == j):
+					newList.append(edge_strength[j][i] / gradientSum) 
+				else:
+					distanceFromLastRow = j - lastRow
+					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+			sampleList.append(newList.index(max(newList)))
+		return sampleList
+
+	def sample4(self):
+		sampleList = []
+		yCoord = int(gt_row)
+		xCoord = int(gt_col)
+		finalXCoord = edge_strength.shape[1]
+		finalYCoord = edge_strength.shape[0]
+		sampleList.insert(0, yCoord)
+		'''
+		for i in range(0, finalXCoord):
+			for j in range(yCoord-10, yCoord+10):
+				edge_strength[j][i] *= 100'''
+		for i in range(xCoord-1, -1, -1):
+			newList = []
+			gradientSum = 0
+			for k in range(0, finalYCoord):
+				gradientSum += edge_strength[k][i]
+			for j in range(0, finalYCoord):
+				lastRow = sampleList[0]
+				if(lastRow > j):
+					distanceFromLastRow = lastRow - j
+					newList.append((edge_strength[j][i] / gradientSum) * (200.0 / distanceFromLastRow))
+				elif(lastRow == j):
+					newList.append((edge_strength[j][i]+100 / gradientSum) * 200.0)
+				else:
+					distanceFromLastRow = j - lastRow
+					newList.append((edge_strength[j][i] / gradientSum) * (200.0 / distanceFromLastRow))
+			sampleList.insert(0, newList.index(max(newList)))
+		for i in range(xCoord+1, finalXCoord):
+			newList = []
+			gradientSum = 0
+			for k in range(0, finalYCoord):
+				gradientSum += edge_strength[k][i]
+			for j in range(0, finalYCoord):
+				lastRow = sampleList[len(sampleList) - 1]
+				if(lastRow > j):
+					distanceFromLastRow = lastRow - j
+					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+				elif(lastRow == j):
+					newList.append(edge_strength[j][i] / gradientSum)
+				else:
+					distanceFromLastRow = j - lastRow
+					newList.append((edge_strength[j][i] / gradientSum) * (1.0 / distanceFromLastRow))
+			sampleList.append(newList.index(max(newList)))
+		return sampleList
+					
+				 
 		
 
 	def mainClass(self):
 		#coordTuple = self.calculateRandomGradient()
 		#sampleList = self.calculateSample(coordTuple[0], coordTuple[1])
+		'''
 		samples = []
 		for i in range(0, 500):
 			coordTuple = self.calculateRandomGradient()
-			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))
-		#print(samples)
+			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))'''
+		print(edge_strength.shape[0], edge_strength.shape[1])
+		listOfSamples = []
+		for i in range(0, 1):
+			listOfSamples.append(self.sample3())
 		samples2 = self.sample2()
-		return (samples,samples2)
+		humanSample = self.sample4()
+		return (listOfSamples,samples2, humanSample)
 
 # calculate "Edge strength map" of an image
 #
@@ -129,9 +226,9 @@ imsave('edges.jpg', edge_strength)
 
 ridge = []
 
-print("length1",len(edge_strength[0]))
-print("length",len(edge_strength))
-print("shape", edge_strength.shape)
+#print("length1",len(edge_strength[0]))
+#print("length",len(edge_strength))
+#print("shape", edge_strength.shape)
 
 for i in range(0, len(edge_strength[0])):
 	newList = []
@@ -177,12 +274,14 @@ sampleList.append(maxGradient.index(max(maxGradient)))
 #print(sampleList)'''
 
 
-mountain = mountainRidgeFinding(edge_strength)
+mountain = mountainRidgeFinding(edge_strength, gt_row, gt_col)
 sampleList = mountain.mainClass()
 #print("sample",len(sampleList[0]))
 
 sampleListOld = sampleList[0]
 sampleListNew = sampleList[1]
+humanSample = sampleList[2]
+#print(sampleListOld)
 
 newRidge2 = []
 for i in range(0, len(sampleListOld[0])):
@@ -200,4 +299,4 @@ for i in range(0, len(sampleListOld[0])):
 # output answer
 imsave(output_filename, draw_edge(input_image, ridge, (255, 0, 0), 5))
 imsave(output_filename, draw_edge(input_image, newRidge2, (0, 255, 0), 5))
-imsave(output_filename, draw_edge(input_image, sampleListNew, (0, 0, 255), 5))
+imsave(output_filename, draw_edge(input_image, humanSample, (0, 0, 255), 5))
