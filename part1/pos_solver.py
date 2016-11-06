@@ -37,7 +37,19 @@ class Solver:
     # Calculate the log of the posterior probability of a given sentence
     #  with a given part-of-speech labeling
     def posterior(self, sentence, label):
-        return 0
+        totalProbPos=sum(self.countPosDict.values())
+        print "inside posterior", label[0]
+	print "check in dict", self.countPosDict[label[0]]
+        p = float(self.countPosDict[label[0]])/float(totalProbPos)
+        probEmssnLastWord = self.emissionProbDict[sentence[len(sentence)-1], label[len(label)-1]]
+        prob=1
+        for i in range(0,len(label)-1):
+            #transition prob * emission prob
+            prob = prob*self.transitionProbDict[label[i],label[i+1]] * self.emissionProbDict[sentence[i],label[i]]
+        prob = prob*p*probEmssnLastWord  
+        if prob==0:
+            prob=1e-70    
+        return math.log(prob)
 
     # Do the training!
     def train(self, data):
@@ -127,42 +139,51 @@ class Solver:
     def returnMax(self,j,listPOS,emissionProb):
         maxProb = 0
         path = ''
-
         for i in listPOS:
             if (i,j) not in self.transitionProbDict:
-                self.transitionProbDict[(i,j)] = 0.000001
-            # print self.viterbiStateDict
+                self.transitionProbDict[(i,j)] = 1e-70
             prob = self.viterbiStateDict[i] * self.transitionProbDict[(i,j)]
             if prob > maxProb:
                 maxProb = prob
                 path = i
-        self.mostLikelyStateSeqDict[j] = maxProb*emissionProb
-
+        self.mostLikelyStateSeqDict[j] = maxProb*emissionProb  
         return maxProb
     
     def hmm(self, sentence):
         #print("transition prob dict", self.transitionProbDict)
         self.mostLikelyPOSList = [] #empty it for each sentence
-        listPOS = list(set(self.initialProbDict.keys()))
-
+        listPOS = ['adj','adv','adp','conj','det','noun','num','pron','prt','verb','x','.']
         for i in range(0,len(sentence)):
             for j in range(0,len(listPOS)):
                 if (sentence[i],listPOS[j]) not in self.emissionProbDict:
-                    self.emissionProbDict[(sentence[i],listPOS[j])] = 0.000001
+                    self.emissionProbDict[(sentence[i],listPOS[j])] = 0
                 emissionProb = self.emissionProbDict[(sentence[i],listPOS[j])]
                 if i==0:
                     #formula is initialProb*emissionProb
-                    self.viterbiStateDict[listPOS[j]] = self.initialProbDict[listPOS[j]]*emissionProb 
-                    self.mostLikelyStateSeqDict[listPOS[j]] = self.initialProbDict[listPOS[j]]*emissionProb   
+                    if self.initialProbDict[listPOS[j]]*emissionProb == 0:
+                        self.viterbiStateDict[listPOS[j]] = 1e-80
+                        self.mostLikelyStateSeqDict[listPOS[j]] = 1e-80
+                    else:
+                        self.viterbiStateDict[listPOS[j]] =self.initialProbDict[listPOS[j]]*emissionProb 
+                        self.mostLikelyStateSeqDict[listPOS[j]] =self.initialProbDict[listPOS[j]]*emissionProb
+                                
                 else:
                     #formula changed
                     maxValue = self.returnMax(listPOS[j],listPOS,emissionProb)
-                    self.viterbiStateDict[listPOS[j]] =  maxValue * emissionProb
+                    if maxValue * emissionProb == 0:
+                        self.viterbiStateDict[listPOS[j]] = 1e-80
+                    else:
+                        self.viterbiStateDict[listPOS[j]] =  maxValue * emissionProb    
+                    
             #pick the maximum probable POS from the dict
             key, _ = max(self.mostLikelyStateSeqDict.iteritems(), key=lambda x:x[1])
             self.mostLikelyPOSList.append(key)
             self.mostLikelyStateSeqDict = {}
-        return [[[self.mostLikelyPOSList[n] for n in range(len(sentence))]], []]
+                 
+        print("sentence is", sentence)
+        time.sleep(3)            
+        print("most likely pos is",self.mostLikelyPOSList)          
+        return [[self.mostLikelyPOSList], [] ]
 
     def returncomplexmax(self,m,n,listPOS,ep):
         max_val=0
@@ -206,11 +227,12 @@ class Solver:
             for s in self.mostLikelyStateSeqCompDict.keys():
                 if p < self.mostLikelyStateSeqCompDict[s]:
                     p = self.mostLikelyStateSeqCompDict[s]
+		    print("ROHIL",p)
                     path = s
 
             mostlikelyPOS.append(path)
+            #if(self.mostLikelyStateSeqCompDict.get(path) != None):
             mostlikelyPOSProb.append(float(self.mostLikelyStateSeqCompDict[path])/float(total_prob))
-
 
         return [[[n for n in mostlikelyPOS]], [['%.2f' % (n) for n in mostlikelyPOSProb], ]]
 
