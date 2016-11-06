@@ -38,17 +38,15 @@ class Solver:
     #  with a given part-of-speech labeling
     def posterior(self, sentence, label):
         totalProbPos=sum(self.countPosDict.values())
-        print "inside posterior", label[0]
-	print "check in dict", self.countPosDict[label[0]]
         p = float(self.countPosDict[label[0]])/float(totalProbPos)
         probEmssnLastWord = self.emissionProbDict[sentence[len(sentence)-1], label[len(label)-1]]
         prob=1
         for i in range(0,len(label)-1):
             #transition prob * emission prob
             prob = prob*self.transitionProbDict[label[i],label[i+1]] * self.emissionProbDict[sentence[i],label[i]]
-        prob = prob*p*probEmssnLastWord  
+        prob = prob*p*probEmssnLastWord
         if prob==0:
-            prob=1e-70    
+            prob=1e-70
         return math.log(prob)
 
     # Do the training!
@@ -90,7 +88,7 @@ class Solver:
             for i in range(2,len(item[1])):
                 if i<len(item[1])-2:
                     if (item[1][i+2],item[1][i+1]+'/'+item[1][i]) not in self.complexTransitionProb:
-                        self.complexTransitionProb[(item[1][i+2],item[1][i+1]+'/'+item[1][i])] = 0.000001
+                        self.complexTransitionProb[(item[1][i+2],item[1][i+1]+'/'+item[1][i])] = 1
                     else:
                         self.complexTransitionProb[(item[1][i+2],item[1][i+1]+'/'+item[1][i])] = self.complexTransitionProb[(item[1][i+2],item[1][i+1]+'/'+item[1][i])] + 1
 
@@ -123,13 +121,13 @@ class Solver:
         for i in range(0,len(sentence)):
             maxprob=0;
             if sentence[i] not in self.countWordsDict.keys():
-                self.countWordsDict[sentence[i]]=0.000001
+                self.countWordsDict[sentence[i]]=1e-80
             for j in self.countPosDict:
                 dictKey=(sentence[i],j) #changed to tuple
                 if dictKey in self.emissionProbDict.keys():
                     currentprob = float(self.emissionProbDict[dictKey]) * float(self.countPosDict[j])/float(self.countWordsDict[sentence[i]])
                 else:
-                    currentprob = 0.000001
+                    currentprob = 1e-80
                 if maxprob < currentprob:
                     maxprob = currentprob
                     mostPosDict[sentence[i]] = j+'@'+str(maxprob)
@@ -180,9 +178,9 @@ class Solver:
             self.mostLikelyPOSList.append(key)
             self.mostLikelyStateSeqDict = {}
                  
-        print("sentence is", sentence)
-        time.sleep(3)            
-        print("most likely pos is",self.mostLikelyPOSList)          
+        # print("sentence is", sentence)
+        # time.sleep(3)
+        # print("most likely pos is",self.mostLikelyPOSList)
         return [[self.mostLikelyPOSList], [] ]
 
     def returncomplexmax(self,m,n,listPOS,ep):
@@ -192,26 +190,43 @@ class Solver:
             try:
                 self.complexTransitionProb[(listPOS[l], listPOS[m] + '/' + listPOS[n])]
             except KeyError:
-                self.complexTransitionProb[(listPOS[l], listPOS[m] + '/' + listPOS[n])] = 0.000001
+                self.complexTransitionProb[(listPOS[l], listPOS[m] + '/' + listPOS[n])] = 1e-80
+            try:
+                self.transitDict[(listPOS[l], listPOS[m])]
+            except KeyError:
+                self.transitDict[(listPOS[l], listPOS[m])] = 1e-80
 
-            prob = math.log1p(self.transitDict[(listPOS[l],listPOS[m])] * self.complexTransitionProb[(listPOS[l],listPOS[m]+'/'+listPOS[n])])
+            if float(self.transitDict[(listPOS[l], listPOS[m])]) == 0.0:
+                self.transitDict[(listPOS[l], listPOS[m])] = 1e-80
+
+            prob = float(self.transitDict[(listPOS[l],listPOS[m])]) * float(self.complexTransitionProb[(listPOS[l],listPOS[m]+'/'+listPOS[n])])
             if prob > max_val:
                 max_val = prob
-            self.mostLikelyStateSeqCompDict[listPOS[n]] = max_val * ep
+            self.mostLikelyStateSeqCompDict[listPOS[n]] = float(max_val) * float(ep)
         return max_val
 
     def complex(self, sentence):
         mostlikelyPOS = []
         mostlikelyPOSProb=[]
-        listPOS = list(set(self.initialProbDict.keys()))
+
+        listPOS = ['adj', 'adv', 'adp', 'conj', 'det', 'noun', 'num', 'pron', 'prt', 'verb', 'x', '.']
         for i in range(len(sentence)):
             for j in range(len(listPOS)):
-                self.transitDict[listPOS[j]] = math.log1p(self.initialProbDict[listPOS[j]] * \
-                                               self.emissionProbDict[(sentence[i],listPOS[j])])
+                try:
+                    self.emissionProbDict[(sentence[i], listPOS[j])]
+                except KeyError:
+                    self.emissionProbDict[(sentence[i], listPOS[j])] = 1e-80
+                if self.emissionProbDict[(sentence[i], listPOS[j])] == 0:
+                    self.emissionProbDict[(sentence[i], listPOS[j])] = 1e-80
 
+                self.transitDict[listPOS[j]] = float(self.initialProbDict[listPOS[j]]) * float(self.emissionProbDict[(sentence[i],listPOS[j])])
+                first_max = 0
                 for k in range(len(listPOS)):
-                    self.transitDict[(listPOS[j],listPOS[k])] = math.log1p(self.transitDict[listPOS[j]] * self.transitionProbDict[(listPOS[j],listPOS[k])] * self.emissionProbDict[(sentence[i],listPOS[k])])
-                    self.mostLikelyStateSeqCompDict[listPOS[k]] = self.transitDict[(listPOS[j],listPOS[k])]
+                    self.transitDict[(listPOS[j],listPOS[k])] = float(self.transitDict[listPOS[j]]) * float(self.transitionProbDict[(listPOS[j],listPOS[k])]) * float(self.emissionProbDict[(sentence[i],listPOS[k])])
+
+                    if self.transitDict[(listPOS[j],listPOS[k])] > first_max:
+                        first_max = self.transitDict[(listPOS[j],listPOS[k])]
+                    self.mostLikelyStateSeqCompDict[listPOS[k]] = first_max
         for i in range(len(sentence)):
             self.mostLikelyStateSeqCompDict = {}
             # mostlikelyPOS = []
@@ -219,7 +234,7 @@ class Solver:
 
             for m in range(len(listPOS)):
                 for n in range(len(listPOS)):
-                    self.transitDict[(listPOS[m],listPOS[n])] = math.log1p(self.returncomplexmax(m,n,listPOS,self.emissionProbDict[(sentence[i],listPOS[n])]) * self.emissionProbDict[(sentence[i],listPOS[n])])
+                    self.transitDict[(listPOS[m],listPOS[n])] = float(self.returncomplexmax(m,n,listPOS,self.emissionProbDict[(sentence[i],listPOS[n])])) * float(self.emissionProbDict[(sentence[i],listPOS[n])])
 
             p = 0
             path = None
@@ -227,15 +242,11 @@ class Solver:
             for s in self.mostLikelyStateSeqCompDict.keys():
                 if p < self.mostLikelyStateSeqCompDict[s]:
                     p = self.mostLikelyStateSeqCompDict[s]
-		    print("ROHIL",p)
                     path = s
 
             mostlikelyPOS.append(path)
-            #if(self.mostLikelyStateSeqCompDict.get(path) != None):
             mostlikelyPOSProb.append(float(self.mostLikelyStateSeqCompDict[path])/float(total_prob))
-
         return [[[n for n in mostlikelyPOS]], [['%.2f' % (n) for n in mostlikelyPOSProb], ]]
-
     # This solve() method is called by label.py, so you should keep the interface the
     #  same, but you can change the code itself. 
     # It's supposed to return a list with two elements:
