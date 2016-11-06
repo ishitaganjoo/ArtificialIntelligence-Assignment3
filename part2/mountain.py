@@ -181,7 +181,7 @@ class mountainRidgeFinding:
 			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))'''
 		print(edge_strength.shape[0], edge_strength.shape[1])
 		listOfSamples = []
-		for i in range(0, 1):
+		for i in range(0, 500):
 			listOfSamples.append(self.sample3())
 		samples2 = self.sample2()
 		humanSample = self.sample4()
