@@ -193,7 +193,7 @@ class mountainRidgeFinding:
 			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))'''
 		print(edge_strength.shape[0], edge_strength.shape[1])
 		listOfSamples = []
-		for i in range(0, 1):
+		for i in range(0, 500):
 			listOfSamples.append(self.sample3())
 		samples2 = self.sample2()
 		humanSample = self.sample4()
@@ -310,5 +310,5 @@ for i in range(0, len(sampleListOld[0])):
 
 # output answer
 imsave(output_filename, draw_edge(input_image, ridge, (255, 0, 0), 5))
-imsave(output_filename, draw_edge(input_image, newRidge2, (0, 255, 0), 5))
-imsave(output_filename, draw_edge(input_image, humanSample, (0, 0, 255), 5))
+imsave(output_filename, draw_edge(input_image, newRidge2, (0, 0, 255), 5))
+imsave(output_filename, draw_edge(input_image, humanSample, (0, 255, 0), 5))
