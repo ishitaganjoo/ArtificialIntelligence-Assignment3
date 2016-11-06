@@ -118,19 +118,20 @@ class Solver:
     #
     def simplified(self, sentence):
         mostPosDict=self.mostPosDict
+        listPOS = list(set(self.initialProbDict.keys()))
         for i in range(0,len(sentence)):
             maxprob=0;
             if sentence[i] not in self.countWordsDict.keys():
                 self.countWordsDict[sentence[i]]=1e-80
-            for j in self.countPosDict:
-                dictKey=(sentence[i],j) #changed to tuple
+            for j in range(len(listPOS)):
+                dictKey=(sentence[i],listPOS[j]) #changed to tuple
                 if dictKey in self.emissionProbDict.keys():
-                    currentprob = float(self.emissionProbDict[dictKey]) * float(self.countPosDict[j])/float(self.countWordsDict[sentence[i]])
+                    currentprob = float(self.emissionProbDict[dictKey]) * float(self.countPosDict[listPOS[j]])/float(self.countWordsDict[sentence[i]])
                 else:
                     currentprob = 1e-80
                 if maxprob < currentprob:
                     maxprob = currentprob
-                    mostPosDict[sentence[i]] = j+'@'+str(maxprob)
+                    mostPosDict[sentence[i]] = listPOS[j]+'@'+str(maxprob)
 
         return [[ [mostPosDict[sentence[i]].split('@')[0] for i in range(len(sentence))]], [ ['%.2f'%(float(mostPosDict[sentence[i]].split('@')[1])) for i in range(len(sentence))], ]]
 
@@ -150,7 +151,7 @@ class Solver:
     def hmm(self, sentence):
         #print("transition prob dict", self.transitionProbDict)
         self.mostLikelyPOSList = [] #empty it for each sentence
-        listPOS = ['adj','adv','adp','conj','det','noun','num','pron','prt','verb','x','.']
+        listPOS = list(set(self.initialProbDict.keys()))
         for i in range(0,len(sentence)):
             for j in range(0,len(listPOS)):
                 if (sentence[i],listPOS[j]) not in self.emissionProbDict:
@@ -209,7 +210,7 @@ class Solver:
         mostlikelyPOS = []
         mostlikelyPOSProb=[]
 
-        listPOS = ['adj', 'adv', 'adp', 'conj', 'det', 'noun', 'num', 'pron', 'prt', 'verb', 'x', '.']
+        listPOS = list(set(self.initialProbDict.keys()))
         for i in range(len(sentence)):
             for j in range(len(listPOS)):
                 try:
