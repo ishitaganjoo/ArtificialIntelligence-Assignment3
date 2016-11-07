@@ -9,6 +9,37 @@
 ####
 # Put your report here!!
 ####
+#
+# Part 1 : Abstraction : First problem require us to form conditional probability tables
+# Intitial Probability: This was calculated by counting the occurences of the first word in each sentence and to calculate the probability we divide it by the
+# total sum of all the initial probabilities. The probability of P(word) = P(initialProbabilityOfWord)/ Sum of all initial probabilities
+# Transition Probability: Transition probability from one state to another state is calculated by counting the total number of occurences of 
+# that transition in the entire data set,and dividing it by the total number of occurences of the initial state in the data set.
+# P(N->V)=count(N->V)/count(N)
+# Emission Probability: This is calculated by counting the number of of occurences of the word given the state and dividing it by the total occurences
+# of that state.
+# P(word|state) = Count of word|state/count of state
+# The logic for calculating the conditional probabilities is written in the train method.
+# We iterate on the dataset, and store the count of different probabilities
+#
+# Part 2: Simplified
+# In the simplified algorithm, more promising label for each words was calculated using Bayesian Probability where the highest value for P(S=label/W=word) 
+# was taken. In the Bayesian probability the likelihood was P(Word/S=label) and prior was P(S= labels) and evidence was P(Word) and the posterior 
+# was P(S=label/W=word).  Python Dictionary was used to select the maximum posterior P(S=label/Word) in which S/Word was stored as a key and respective 
+# probability as value. 
+#
+# Part 3: Viterbi Algorithm
+# 1. We created a list containing all the different parts of the speech
+# 2. We stored the probabilities for the first word given all the POS
+# 3. Using the calculated probabilities for each previous word, we calculated the probabilities for each word given all POS
+# 4. Then using backtracking algorithm, we trace the path for the most likely POS sequence
+# 
+# Part 4 Complex : In this scenario, we calculate the initial probability same as the Viterbi case by multiplying the initial probability with the emission
+# probaility. And then, we sum the probabilities over a label and then multiply it with the emission probability of the current word.
+# Probabilities for all the words given all POS are stored and then maximum probability for the word given a particular POS is saved. 
+#
+# Posterior Probabilities: We first calculate the probability of the first word and the emission probability for the last word, we then iterate over
+# all the words and then calculate the transitionProbability*emissionProbability and we take the logarithmic probability.
 
 import random
 import math
@@ -47,22 +78,26 @@ class Solver:
 	for i in range(0, len(newList)):
 		probSum += newList[i]
 	p = float(float(self.countPosDict[label[0]]) / float(probSum))
-	pLastEm = self.emissionProbDict[sentence[len(sentence) - 1], label[len(label) - 1]]
+	if((sentence[len(sentence) - 1], label[len(label) - 1]) in self.emissionProbDict):
+		pLastEm = self.emissionProbDict[sentence[len(sentence) - 1], label[len(label) - 1]]
+	else:
+		self.emissionProbDict[sentence[len(sentence) - 1], label[len(label) - 1]] = 1e-10
+		pLastEm = self.emissionProbDict[sentence[len(sentence) - 1], label[len(label) - 1]]
 	newProb = 1.0
 	for i in range(0, len(label)-1):
-		if((label[i],label[i+1]) in self.emissionProbDict):
+		if((label[i],label[i+1]) in self.transitionProbDict):
 			if((sentence[i], label[i]) in self.emissionProbDict):
-				newProb *= self.emissionProbDict[label[i], label[i+1]] * self.emissionProbDict[sentence[i], label[i]]
+				newProb *= self.transitionProbDict[label[i], label[i+1]] * self.emissionProbDict[sentence[i], label[i]]
 				break
 			else:
 				self.emissionProbDict[sentence[i], label[i]] = 1e-10
 		else:
 			if((sentence[i], label[i]) in self.emissionProbDict):
-				self.emissionProbDict[label[i], label[i+1]] = 1e-10
+				self.transitionProbDict[label[i], label[i+1]] = 1e-10
 			else:
 				self.emissionProbDict[sentence[i], label[i]] = 1e-10
-				self.emissionProbDict[label[i], label[i+1]] = 1e-10
-		newProb *= self.emissionProbDict[label[i], label[i+1]] * self.emissionProbDict[sentence[i], label[i]]
+				self.transitionProbDict[label[i], label[i+1]] = 1e-10
+		newProb *= self.transitionProbDict[label[i], label[i+1]] * self.emissionProbDict[sentence[i], label[i]]
 	newProb = newProb * p * pLastEm
 	if newProb == 0:
 		newProb = 1e-10
