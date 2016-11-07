@@ -3,6 +3,29 @@
 # Mountain ridge finder
 # Based on skeleton code by D. Crandall, Oct 2016
 #
+# Part 1: For the part 1, the idea behind formualting this problem was to start from column 0 and find the max gradient at that column, then suppose I found
+# the max gradient at row number 5 for column 0, then moving on to column 1, I'll assign the max probability of 1 to the row number 5 of column 1 because we are
+# assuming that the ridge is a straight line and as we are moving away from row number 5, i.e we are considering the vertical distance from row number 5, as the
+# distance increases, our probability decreases. Now, we found the maximum probaility of a pixel at say row number 10 of column 1, now keeping this row number 10
+# in mind, we will calculate the next columns max probability. In this sense, we will calculate the max probability of each pixel at each column and then plot it.
+#
+# Part 2: This part uses the same approach as that of the part 1 with some modifications. I translated the problem into a Hidden Markov Model.
+# What the algorith does is that it finds a random column and then try to find the max gradient in that column and then use the max probability of the current
+# column to find the maximum probability of the next column. The initial probability is the max edge strength of a random column chosen, the transitional
+# probability will be the (1 / distance where distance will be the vertical distance of the row number as discussed in part 1, the emission probability
+# will be the edge strength of a particular point (x,y) where x and y are row and column number respectively.
+# Now this is just one sample, we are incorporating the Gibbs sampling method, where we are generating 100 samples for random columns and then try to estimate
+# the ridge line of the mountain. After we have a dataset of 100 ridge lines, we plot the pixel with maximum frequency per column i.e the pixel which comes
+# most in each column in all the samples is plotted on the image.
+#
+# Part 3: In this part we are given a human input where the a point (x, y) is assumed to lie on the ridge line and then we try to map the ridge line. My approach
+# for this part uses the same algorithm as in part 2 but without the sampling part and the part where I choose a random column number, in this case we use the 
+# point provided by the human as our initial probability and then try to use the same method as in part 2 to calculate the max probability in a column and then
+# map the ridge line on the image.
+#
+# One assumption that I have made in part3 is that I am assuming that the the ridge line is not fluctuating that much, so if for a column number 5, we find the max
+# probability at row number 10, then for column number 6, I am assuming the max probability can be 2 rows above or 2 rows below. Beyond this range, I am scaling down
+# the emission probability of the rest columns because otherwise it will again try to map the points which has a higher edge strength than the one we need.
 
 from PIL import Image
 from numpy import *
@@ -28,35 +51,7 @@ class mountainRidgeFinding:
 		for i in range(0 , len(edge_strength)):
 			maxGradient.append(edge_strength[i][firstRandom])
 		sample.append(maxGradient.index(max(maxGradient)))
-		#print("here",sample)
 		return(firstRandom, sample[0])
-
-	def calculateSample(self, xCoord, yCoord):
-		#print(xCoord, yCoord)
-		sampleList = []
-		for i in range(0, xCoord):
-			newList = []
-			for j in range(0, yCoord):
-				jFloat = float(j)
-				yCoordFloat = float(yCoord)
-				if(j == 0):
-					newList.append(edge_strength[j][i] * (0.001))
-				else:
-					newList.append(edge_strength[j][i]*(jFloat/yCoordFloat))
-			sampleList.append(newList.index(max(newList)))
-		#print("first", sampleList)
-		for i in range(xCoord, edge_strength.shape[1]):
-			newList = []
-			for j in range(yCoord, edge_strength.shape[0]):
-				jFloat = float(j)
-				yFloat = float(edge_strength.shape[0])
-				if(j == yCoord):
-					prob = 0.99
-					newList.append(edge_strength[j][i]* prob)
-				else:
-					newList.append(edge_strength[j][i]*((yFloat - yCoord)/ yFloat))
-			sampleList.append(newList.index(max(newList)))
-		return sampleList
 
 	def sample2(self):
 		sampleList = []
@@ -81,7 +76,6 @@ class mountainRidgeFinding:
 		return sampleList
 
 	def sample3(self):
-		#xCoord = edge_strength.shape[1]
 		sampleList = []
 		yCoord = edge_strength.shape[0]
 		finalXCoord = edge_strength.shape[1]
@@ -130,10 +124,6 @@ class mountainRidgeFinding:
 		finalXCoord = edge_strength.shape[1]
 		finalYCoord = edge_strength.shape[0]
 		sampleList.insert(0, yCoord)
-		'''
-		for i in range(0, finalXCoord):
-			for j in range(yCoord-10, yCoord+10):
-				edge_strength[j][i] *= 100'''
 		for i in range(xCoord-1, -1, -1):
 			newList = []
 			gradientSum = 0
@@ -184,20 +174,12 @@ class mountainRidgeFinding:
 		
 
 	def mainClass(self):
-		#coordTuple = self.calculateRandomGradient()
-		#sampleList = self.calculateSample(coordTuple[0], coordTuple[1])
-		'''
-		samples = []
-		for i in range(0, 500):
-			coordTuple = self.calculateRandomGradient()
-			samples.append(self.calculateSample(coordTuple[0], coordTuple[1]))'''
-		print(edge_strength.shape[0], edge_strength.shape[1])
 		listOfSamples = []
-		for i in range(0, 500):
+		for i in range(0, 100):
 			listOfSamples.append(self.sample3())
 		samples2 = self.sample2()
 		humanSample = self.sample4()
-		return (listOfSamples,samples2, humanSample)
+		return (listOfSamples, samples2, humanSample)
 
 # calculate "Edge strength map" of an image
 #
@@ -238,62 +220,19 @@ imsave('edges.jpg', edge_strength)
 
 ridge = []
 
-#print("length1",len(edge_strength[0]))
-#print("length",len(edge_strength))
-#print("shape", edge_strength.shape)
-
 for i in range(0, len(edge_strength[0])):
 	newList = []
 	for j in range(0, len(edge_strength)):
 		newList.append(edge_strength[j][i])
 	ridge.append(newList.index(max(newList)))
-'''
-newList2 = []
-for i in range(0, 1):
-	newList = []
-	for j in range(0, len(edge_strength)):
-		newList.append(edge_strength[j][i])
-	newList2.append(newList.index(max(newList)))
-	#ridge.append(newList.index(max(newList)))
-
-firstPixel = newList2[0]
-print(firstPixel)
-ridge.append(firstPixel)
-for i in range(1, len(edge_strength[0])):
-	newList = []
-	for j in range(firstPixel - 125, firstPixel + 125):
-		#print(j)
-		newList.append(edge_strength[j][i])
-	ridge.append(newList.index(max(newList)) + firstPixel-125) 
-	
-
-#print(newList2)
-#print(ridge)
-
-
-#print(edge_strength.shape[1])
-
-firstRandom = randint(0,500)
-
-maxGradient = []
-sampleList = []
-
-for i in range(0, len(edge_strength)):
-	maxGradient.append(edge_strength[i][firstRandom])
-sampleList.append(maxGradient.index(max(maxGradient)))
-
-#print(firstRandom)
-#print(sampleList)'''
 
 
 mountain = mountainRidgeFinding(edge_strength, gt_row, gt_col)
 sampleList = mountain.mainClass()
-#print("sample",len(sampleList[0]))
 
 sampleListOld = sampleList[0]
 sampleListNew = sampleList[1]
 humanSample = sampleList[2]
-#print(sampleListOld)
 
 newRidge2 = []
 for i in range(0, len(sampleListOld[0])):
@@ -304,9 +243,7 @@ for i in range(0, len(sampleListOld[0])):
 			newDict[sampleListOld[j][i]] = value + 1
 		else:
 			newDict[sampleListOld[j][i]] = 1
-	#print(newDict)
 	newRidge2.append(max(newDict, key=(lambda key: newDict[key])))
-#print(newRidge2)
 
 # output answer
 imsave(output_filename, draw_edge(input_image, ridge, (255, 0, 0), 5))
