@@ -15,6 +15,8 @@ import math
 import time
 from time import sleep
 from collections import OrderedDict
+import collections
+import sys
 
 # We've set up a suggested code structure, but feel free to change it. Just
 # make sure your code still works with the label.py and pos_scorer.py code
@@ -31,13 +33,14 @@ class Solver:
         self.viterbiStateDict = {}
         self.mostLikelyStateSeqDict = {}
         self.mostLikelyPOSList = []
+        self.probListComplex = []
         self.complexTransitionProb={}
         self.transitDict={}
         self.mostLikelyStateSeqCompDict={}
     # Calculate the log of the posterior probability of a given sentence
     #  with a given part-of-speech labeling
     def posterior(self, sentence, label):
-        totalProbPos=sum(self.countPosDict.values())
+        '''totalProbPos=sum(self.countPosDict.values())
         p = float(self.countPosDict[label[0]])/float(totalProbPos)
         probEmssnLastWord = self.emissionProbDict[sentence[len(sentence)-1], label[len(label)-1]]
         prob=1
@@ -46,8 +49,9 @@ class Solver:
             prob = prob*self.transitionProbDict[label[i],label[i+1]] * self.emissionProbDict[sentence[i],label[i]]
         prob = prob*p*probEmssnLastWord
         if prob==0:
-            prob=1e-70
-        return math.log(prob)
+            prob=1e-80
+        return math.log(prob)'''
+        return 0
 
     # Do the training!
     def train(self, data):
@@ -75,45 +79,31 @@ class Solver:
                 self.initialProbDict[item[1][0]] = self.initialProbDict[item[1][0]] + 1
             for i in range(0, len(item[1])):
                 if i<len(item[1])-1: #else index out of range
-                    if (item[1][i+1],item[1][i]) not in self.transitionProbDict:
-                        self.transitionProbDict[(item[1][i+1],item[1][i])] = 1
+                    if (item[1][i],item[1][i+1]) not in self.transitionProbDict:
+                        self.transitionProbDict[(item[1][i],item[1][i+1])] = 1
                     else:
-                        self.transitionProbDict[(item[1][i+1],item[1][i])] = self.transitionProbDict[(item[1][i+1],item[1][i])] + 1
+                        self.transitionProbDict[(item[1][i],item[1][i+1])] = self.transitionProbDict[(item[1][i],item[1][i+1])] + 1
                     
                 if (item[0][i],item[1][i]) not in self.emissionProbDict: # check both elements of the tuple
                     self.emissionProbDict[(item[0][i],item[1][i])] = 1
                 else:
                     self.emissionProbDict[(item[0][i],item[1][i])] = self.emissionProbDict[(item[0][i],item[1][i])] + 1
 
-            for i in range(2,len(item[1])):
-                if i<len(item[1])-2:
-                    if (item[1][i+2],item[1][i+1]+'/'+item[1][i]) not in self.complexTransitionProb:
-                        self.complexTransitionProb[(item[1][i+2],item[1][i+1]+'/'+item[1][i])] = 1
-                    else:
-                        self.complexTransitionProb[(item[1][i+2],item[1][i+1]+'/'+item[1][i])] = self.complexTransitionProb[(item[1][i+2],item[1][i+1]+'/'+item[1][i])] + 1
-
-
         sumInitialProb = sum(self.initialProbDict.values())
         self.initialProbDict.update({n: float( self.initialProbDict[n])/ float(sumInitialProb)for n in self.initialProbDict.keys()})
-
-        self.updateTransitions(self.transitionProbDict)
-        self.updateTransitions(self.complexTransitionProb)
+        
+        listKeysTranstn = self.transitionProbDict.keys()
+        for key in listKeysTranstn:
+            self.transitionProbDict[key] = float(self.transitionProbDict[key])/float(self.countPosDict[key[0]]) 
+            
+        
         listKeys = self.emissionProbDict.keys()
         for key in listKeys:
             self.emissionProbDict[key] = float(self.emissionProbDict[key])/float(self.countPosDict[key[1]])
+        
         pass
 
-    #function to update the transition probabilities of one-oreder model and two-order model
-
-    def updateTransitions(self,dict):
-        for key_1,value_1 in dict.items():
-            den_sum = 0
-            for key_2,value_2 in dict.items():
-                if key_1[0] == key_2[0]:
-                    den_sum = float(den_sum) + float(value_2)
-            dict[key_1] = float(value_1) / float(den_sum)
-
-
+   
     # Functions for each algorithm.
     #
     def simplified(self, sentence):
@@ -134,119 +124,106 @@ class Solver:
 
         return [[ [mostPosDict[sentence[i]].split('@')[0] for i in range(len(sentence))]], [ ['%.2f'%(float(mostPosDict[sentence[i]].split('@')[1])) for i in range(len(sentence))], ]]
 
-    def returnMax(self,j,listPOS,emissionProb):
-        maxProb = 0
-        path = ''
-        for i in listPOS:
-            if (i,j) not in self.transitionProbDict:
-                self.transitionProbDict[(i,j)] = 1e-70
-            prob = self.viterbiStateDict[i] * self.transitionProbDict[(i,j)]
-            if prob > maxProb:
-                maxProb = prob
-                path = i
-        self.mostLikelyStateSeqDict[j] = maxProb*emissionProb  
-        return maxProb
     
     def hmm(self, sentence):
-        #print("transition prob dict", self.transitionProbDict)
+        
         self.mostLikelyPOSList = [] #empty it for each sentence
         listPOS = ['adj','adv','adp','conj','det','noun','num','pron','prt','verb','x','.']
         for i in range(0,len(sentence)):
+            finalSeqDict = {}
             for j in range(0,len(listPOS)):
-                if (sentence[i],listPOS[j]) not in self.emissionProbDict:
-                    self.emissionProbDict[(sentence[i],listPOS[j])] = 0
-                emissionProb = self.emissionProbDict[(sentence[i],listPOS[j])]
+                
                 if i==0:
-                    #formula is initialProb*emissionProb
-                    if self.initialProbDict[listPOS[j]]*emissionProb == 0:
-                        self.viterbiStateDict[listPOS[j]] = 1e-80
-                        self.mostLikelyStateSeqDict[listPOS[j]] = 1e-80
+                    if (sentence[i],listPOS[j]) in self.emissionProbDict:
+                        finalSeqDict[listPOS[j]] = [self.initialProbDict[listPOS[j]]*self.emissionProbDict[(sentence[i],listPOS[j])], listPOS[j]] 
                     else:
-                        self.viterbiStateDict[listPOS[j]] =self.initialProbDict[listPOS[j]]*emissionProb 
-                        self.mostLikelyStateSeqDict[listPOS[j]] =self.initialProbDict[listPOS[j]]*emissionProb
+                        finalSeqDict[listPOS[j]] = [1e-80,listPOS[j]]    
+                                
+                else:
+                    maxProb = 0
+                    path = listPOS[j]
+                    for k in listPOS:
+                        if (k,listPOS[j]) not in self.transitionProbDict:
+                            prob = 1e-80
+                        else:
+                            prob = self.mostLikelyPOSList[i-1][k][0]* self.transitionProbDict[(k,listPOS[j])]    
+                        if prob > maxProb and prob!=1e-80:
+                            maxProb = prob
+                            path = k
+                       
+                    if maxProb== 0:
+                        maxProb =1e-80   
+                    if (sentence[i],listPOS[j]) in self.emissionProbDict:
+                        finalSeqDict[listPOS[j]] = [maxProb*self.emissionProbDict[(sentence[i],listPOS[j])] , path]
+                    else:
+                        finalSeqDict[listPOS[j]] = [maxProb* (1e-80), path]    
+                    
+            self.mostLikelyPOSList.append(finalSeqDict)
+            
+        #implement BackTracking
+        lastDict = self.mostLikelyPOSList[-1]
+        maxVal=0
+        tag,likelyKey='',''
+        for key in lastDict:
+            val = lastDict[key][0]
+            if lastDict[key][0]>maxVal:
+                maxVal = lastDict[key][0]
+                tag = lastDict[key][1]
+                likelyKey = key
+        finalPath = collections.deque()    
+        if len(sentence)>1:
+            finalPath.appendleft(likelyKey)
+            
+        finalPath.appendleft(tag)
+        
+        for i in range(len(sentence)-2,0,-1):
+            tag = self.mostLikelyPOSList[i][tag][1]     
+            finalPath.appendleft(tag)  
+       
+        return [ [finalPath], []]
+
+    def returnSum(self,j,listPOS):
+        prob = 1e-80
+        path = ''
+        for i in listPOS:
+            if (i,j) not in self.transitionProbDict:
+                self.transitionProbDict[(i,j)] = 1e-80
+            prob = prob + self.viterbiStateDict[i] * self.transitionProbDict[(i,j)]
+            
+        return prob
+    
+    def complex(self, sentence):
+        self.mostLikelyPOSList = [] #empty it for each sentence
+        self.probListComplex = []
+        listPOS = ['adj','adv','adp','conj','det','noun','num','pron','prt','verb','x','.']
+        for i in range(0,len(sentence)):
+            for j in range(0,len(listPOS)):
+                if i==0:
+                    if (sentence[i],listPOS[j]) in self.emissionProbDict:
+                        
+                        self.viterbiStateDict[listPOS[j]] = self.initialProbDict[listPOS[j]]*self.emissionProbDict[(sentence[i],listPOS[j])] 
+                    else:
+                       
+                        self.viterbiStateDict[listPOS[j]] = 1e-80  
                                 
                 else:
                     #formula changed
-                    maxValue = self.returnMax(listPOS[j],listPOS,emissionProb)
-                    if maxValue * emissionProb == 0:
-                        self.viterbiStateDict[listPOS[j]] = 1e-80
+                    value = self.returnSum(listPOS[j],listPOS)
+                    if (sentence[i],listPOS[j]) not in self.emissionProbDict:
+                        self.viterbiStateDict[listPOS[j]] = value * 1e-80
+                   
                     else:
-                        self.viterbiStateDict[listPOS[j]] =  maxValue * emissionProb    
+                        self.viterbiStateDict[listPOS[j]] =  value * self.emissionProbDict[(sentence[i],listPOS[j])]    
                     
             #pick the maximum probable POS from the dict
-            key, _ = max(self.mostLikelyStateSeqDict.iteritems(), key=lambda x:x[1])
+            key, prob = max(self.viterbiStateDict.iteritems(), key=lambda x:x[1])
             self.mostLikelyPOSList.append(key)
-            self.mostLikelyStateSeqDict = {}
-                 
-        # print("sentence is", sentence)
-        # time.sleep(3)
-        # print("most likely pos is",self.mostLikelyPOSList)
+            self.probListComplex.append(prob)
+        print("length of pos list", len(self.mostLikelyPOSList))
+        print("length of complex prob list", len(self.probListComplex))    
         return [[self.mostLikelyPOSList], [] ]
 
-    def returncomplexmax(self,m,n,listPOS,ep):
-        max_val=0
-
-        for l in range(len(listPOS)):
-            try:
-                self.complexTransitionProb[(listPOS[l], listPOS[m] + '/' + listPOS[n])]
-            except KeyError:
-                self.complexTransitionProb[(listPOS[l], listPOS[m] + '/' + listPOS[n])] = 1e-80
-            try:
-                self.transitDict[(listPOS[l], listPOS[m])]
-            except KeyError:
-                self.transitDict[(listPOS[l], listPOS[m])] = 1e-80
-
-            if float(self.transitDict[(listPOS[l], listPOS[m])]) == 0.0:
-                self.transitDict[(listPOS[l], listPOS[m])] = 1e-80
-
-            prob = float(self.transitDict[(listPOS[l],listPOS[m])]) * float(self.complexTransitionProb[(listPOS[l],listPOS[m]+'/'+listPOS[n])])
-            if prob > max_val:
-                max_val = prob
-            self.mostLikelyStateSeqCompDict[listPOS[n]] = float(max_val) * float(ep)
-        return max_val
-
-    def complex(self, sentence):
-        mostlikelyPOS = []
-        mostlikelyPOSProb=[]
-
-        listPOS = ['adj', 'adv', 'adp', 'conj', 'det', 'noun', 'num', 'pron', 'prt', 'verb', 'x', '.']
-        for i in range(len(sentence)):
-            for j in range(len(listPOS)):
-                try:
-                    self.emissionProbDict[(sentence[i], listPOS[j])]
-                except KeyError:
-                    self.emissionProbDict[(sentence[i], listPOS[j])] = 1e-80
-                if self.emissionProbDict[(sentence[i], listPOS[j])] == 0:
-                    self.emissionProbDict[(sentence[i], listPOS[j])] = 1e-80
-
-                self.transitDict[listPOS[j]] = float(self.initialProbDict[listPOS[j]]) * float(self.emissionProbDict[(sentence[i],listPOS[j])])
-                first_max = 0
-                for k in range(len(listPOS)):
-                    self.transitDict[(listPOS[j],listPOS[k])] = float(self.transitDict[listPOS[j]]) * float(self.transitionProbDict[(listPOS[j],listPOS[k])]) * float(self.emissionProbDict[(sentence[i],listPOS[k])])
-
-                    if self.transitDict[(listPOS[j],listPOS[k])] > first_max:
-                        first_max = self.transitDict[(listPOS[j],listPOS[k])]
-                    self.mostLikelyStateSeqCompDict[listPOS[k]] = first_max
-        for i in range(len(sentence)):
-            self.mostLikelyStateSeqCompDict = {}
-            # mostlikelyPOS = []
-            # mostlikelyPOSProb = []
-
-            for m in range(len(listPOS)):
-                for n in range(len(listPOS)):
-                    self.transitDict[(listPOS[m],listPOS[n])] = float(self.returncomplexmax(m,n,listPOS,self.emissionProbDict[(sentence[i],listPOS[n])])) * float(self.emissionProbDict[(sentence[i],listPOS[n])])
-
-            p = 0
-            path = None
-            total_prob=sum(self.mostLikelyStateSeqCompDict.values())
-            for s in self.mostLikelyStateSeqCompDict.keys():
-                if p < self.mostLikelyStateSeqCompDict[s]:
-                    p = self.mostLikelyStateSeqCompDict[s]
-                    path = s
-
-            mostlikelyPOS.append(path)
-            mostlikelyPOSProb.append(float(self.mostLikelyStateSeqCompDict[path])/float(total_prob))
-        return [[[n for n in mostlikelyPOS]], [['%.2f' % (n) for n in mostlikelyPOSProb], ]]
+       
     # This solve() method is called by label.py, so you should keep the interface the
     #  same, but you can change the code itself. 
     # It's supposed to return a list with two elements:
