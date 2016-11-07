@@ -37,11 +37,12 @@ class Solver:
         self.complexTransitionProb={}
         self.transitDict={}
         self.mostLikelyStateSeqCompDict={}
+
+
     # Calculate the log of the posterior probability of a given sentence
     #  with a given part-of-speech labeling
     def posterior(self, sentence, label):
 	newList = self.countPosDict.values()
-	#print("rohil", self.emissionProbDict)
 	probSum = 0
 	for i in range(0, len(newList)):
 		probSum += newList[i]
@@ -66,17 +67,6 @@ class Solver:
 	if newProb == 0:
 		newProb = 1e-10
 	return math.log(newProb)
-        '''totalProbPos=sum(self.countPosDict.values())
-        p = float(self.countPosDict[label[0]])/float(totalProbPos)
-        probEmssnLastWord = self.emissionProbDict[sentence[len(sentence)-1], label[len(label)-1]]
-        prob=1
-        for i in range(0,len(label)-1):
-            #transition prob * emission prob
-            prob = prob*self.transitionProbDict[label[i],label[i+1]] * self.emissionProbDict[sentence[i],label[i]]
-        prob = prob*p*probEmssnLastWord
-        if prob==0:
-            prob=1e-80
-        return math.log(prob)'''
 
     # Do the training!
     def train(self, data):
