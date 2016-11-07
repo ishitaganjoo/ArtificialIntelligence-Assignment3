@@ -40,6 +40,32 @@ class Solver:
     # Calculate the log of the posterior probability of a given sentence
     #  with a given part-of-speech labeling
     def posterior(self, sentence, label):
+	newList = self.countPosDict.values()
+	#print("rohil", self.emissionProbDict)
+	probSum = 0
+	for i in range(0, len(newList)):
+		probSum += newList[i]
+	p = float(float(self.countPosDict[label[0]]) / float(probSum))
+	pLastEm = self.emissionProbDict[sentence[len(sentence) - 1], label[len(label) - 1]]
+	newProb = 1.0
+	for i in range(0, len(label)-1):
+		if((label[i],label[i+1]) in self.emissionProbDict):
+			if((sentence[i], label[i]) in self.emissionProbDict):
+				newProb *= self.emissionProbDict[label[i], label[i+1]] * self.emissionProbDict[sentence[i], label[i]]
+				break
+			else:
+				self.emissionProbDict[sentence[i], label[i]] = 1e-10
+		else:
+			if((sentence[i], label[i]) in self.emissionProbDict):
+				self.emissionProbDict[label[i], label[i+1]] = 1e-10
+			else:
+				self.emissionProbDict[sentence[i], label[i]] = 1e-10
+				self.emissionProbDict[label[i], label[i+1]] = 1e-10
+		newProb *= self.emissionProbDict[label[i], label[i+1]] * self.emissionProbDict[sentence[i], label[i]]
+	newProb = newProb * p * pLastEm
+	if newProb == 0:
+		newProb = 1e-10
+	return math.log(newProb)
         '''totalProbPos=sum(self.countPosDict.values())
         p = float(self.countPosDict[label[0]])/float(totalProbPos)
         probEmssnLastWord = self.emissionProbDict[sentence[len(sentence)-1], label[len(label)-1]]
@@ -51,7 +77,6 @@ class Solver:
         if prob==0:
             prob=1e-80
         return math.log(prob)'''
-        return 0
 
     # Do the training!
     def train(self, data):
@@ -219,8 +244,8 @@ class Solver:
             key, prob = max(self.viterbiStateDict.iteritems(), key=lambda x:x[1])
             self.mostLikelyPOSList.append(key)
             self.probListComplex.append(prob)
-        print("length of pos list", len(self.mostLikelyPOSList))
-        print("length of complex prob list", len(self.probListComplex))    
+        #print("length of pos list", len(self.mostLikelyPOSList))
+        #print("length of complex prob list", len(self.probListComplex))    
         return [[self.mostLikelyPOSList], [] ]
 
        
